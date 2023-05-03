@@ -19,6 +19,7 @@ void Player::initialize()
     setLevelAchieved(0);
     setTimeAchieved(0);
     setTimeAchievedText("00:00");
+    setPointsAchieved(0);
     setInHighscoreList(false);
 }
 
@@ -77,6 +78,19 @@ void Player::setTimeAchievedText(const QString &timeText)
     if (timeText != m_timeText) {
         m_timeText = timeText;
         emit timeAchievedTextChanged();
+    }
+}
+
+int Player::pointsAchieved()
+{
+    return m_points;
+}
+
+void Player::setPointsAchieved(int points)
+{
+    if (points != m_points) {
+        m_points = points;
+        emit pointsAchievedChanged();
     }
 }
 

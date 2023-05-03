@@ -1,6 +1,4 @@
 #include <QDebug>
-#include <QFile>
-#include <QDir>
 #include "gamedata.h"
 
 GameData::GameData(QObject *parent)
@@ -8,15 +6,15 @@ GameData::GameData(QObject *parent)
 {
 }
 
-GameData::GameData(PlayerTableModel *playerItemModel, QObject *parent)
-    : QObject(parent), m_playerItemModel(playerItemModel)
+GameData::GameData(AbstractPlayerTableModel *playerTableModel, GameType gameType, HighscoreType highscoreType, QObject *parent)
+    : QObject(parent), m_gameType(gameType), m_highscoreType(highscoreType), m_playerTableModel(playerTableModel)
 {
     setup();
 }
 
 void GameData::setup()
 {
-    m_playerItemModel->setData(&m_highscores);
+    m_playerTableModel->setData(&m_highscores);
     m_player1 = new Player(1, this);
     m_player2 = new Player(2, this);
     m_playerNamesFilePath = QDir::currentPath() + "/player-names.txt";
@@ -41,8 +39,7 @@ void GameData::loadPlayerNames()
     int linesArrayLength = sizeof(lines) / sizeof(QString);
 
     QFile file(m_playerNamesFilePath);
-    if (file.open(QIODevice::ReadOnly))
-    {
+    if (file.open(QIODevice::ReadOnly)) {
         int lineIndex = 0;
         QTextStream stream(&file);
         for (QString line = stream.readLine(); !line.isNull(); line = stream.readLine()) {
@@ -61,8 +58,7 @@ void GameData::loadPlayerNames()
 void GameData::savePlayerNames()
 {
     QFile file(m_playerNamesFilePath);
-    if (file.open(QIODevice::ReadWrite | QIODevice::Truncate))
-    {
+    if (file.open(QIODevice::ReadWrite | QIODevice::Truncate)) {
         QTextStream stream(&file);
         stream << m_player1->name();
         stream << Qt::endl;
@@ -81,45 +77,65 @@ void GameData::loadHighscores()
     }
 
     QFile file(m_highscoresFilePath);
-    if (file.open(QIODevice::ReadOnly))
-    {
+    if (file.open(QIODevice::ReadOnly)) {
         int lineIndex = 0;
         QTextStream stream(&file);
         for (QString line = stream.readLine(); !line.isNull(); line = stream.readLine()) {
-            QStringList elements = line.split("|");
-            if (elements.length() == 3) {
-                m_highscores[lineIndex]->setName(elements[0]);
-                bool valid;
-                double timeAchieved = elements[1].toDouble(&valid);
-                if (valid) {
-                    m_highscores[lineIndex]->setTimeAchieved(timeAchieved);
-                }
-                int levelAchieved = elements[2].toInt(&valid);
-                if (valid) {
-                    m_highscores[lineIndex]->setLevelAchieved(levelAchieved);
-                }
+            if (m_highscoreType == HighscoreType::Points) {
+                loadPointsHighscores(line, lineIndex);
+            } else if (m_highscoreType == HighscoreType::TimeLevel) {
+                loadTimeLevelHighscores(line, lineIndex);
             }
             lineIndex++;
             if (lineIndex >= maxNumberHighscores) {
                 break;
             }
-        };
-       file.close();
+        }
+        file.close();
+    }
+}
+
+void GameData::loadPointsHighscores(QString line, int lineIndex)
+{
+    QStringList elements = line.split("|");
+    if (elements.length() == 2) {
+        m_highscores[lineIndex]->setName(elements[0]);
+        bool valid;
+        int pointsAchieved = elements[1].toInt(&valid);
+        if (valid) {
+            m_highscores[lineIndex]->setPointsAchieved(pointsAchieved);
+        }
+    }
+}
+
+void GameData::loadTimeLevelHighscores(QString line, int lineIndex)
+{
+    QStringList elements = line.split("|");
+    if (elements.length() == 3) {
+        m_highscores[lineIndex]->setName(elements[0]);
+        bool valid;
+        double timeAchieved = elements[1].toDouble(&valid);
+        if (valid) {
+            m_highscores[lineIndex]->setTimeAchieved(timeAchieved);
+        }
+        int levelAchieved = elements[2].toInt(&valid);
+        if (valid) {
+            m_highscores[lineIndex]->setLevelAchieved(levelAchieved);
+        }
     }
 }
 
 void GameData::saveHighscores()
 {
     QFile file(m_highscoresFilePath);
-    if (file.open(QIODevice::ReadWrite | QIODevice::Truncate))
-    {
+    if (file.open(QIODevice::ReadWrite | QIODevice::Truncate)) {
         QTextStream stream(&file);
         for (int index = 0; index < m_highscores.length(); index++) {
-            stream << m_highscores[index]->name();
-            stream << "|";
-            stream << m_highscores[index]->timeAchieved();
-            stream << "|";
-            stream << m_highscores[index]->levelAchieved();
+            if (m_highscoreType == HighscoreType::Points) {
+                savePointsHighscores(stream, index);
+            } else if (m_highscoreType == HighscoreType::TimeLevel) {
+                saveTimeLevelHighscores(stream, index);
+            }
             if (index < m_highscores.length() - 1) {
                 stream << Qt::endl;
             }
@@ -128,34 +144,86 @@ void GameData::saveHighscores()
     }
 }
 
+void GameData::savePointsHighscores(QTextStream &stream, int index)
+{
+    stream << m_highscores[index]->name();
+    stream << "|";
+    stream << m_highscores[index]->pointsAchieved();
+}
+
+void GameData::saveTimeLevelHighscores(QTextStream &stream, int index)
+{
+    stream << m_highscores[index]->name();
+    stream << "|";
+    stream << m_highscores[index]->timeAchieved();
+    stream << "|";
+    stream << m_highscores[index]->levelAchieved();
+}
+
 void GameData::updateHighscores()
 {
-    updateHighscoresWithPlayer(m_player1);
-    updateHighscoresWithPlayer(m_player2);
+    if (m_gameType == GameType::Coop) {
+        updateHighscoresWithCoopPlayer(getCoopPlayer());
+    } else if (m_gameType == GameType::PvP) {
+        updateHighscoresWithPlayer(m_player1);
+        updateHighscoresWithPlayer(m_player2);
+    }
 }
 
 void GameData::updateHighscoresWithPlayer(Player *player)
 {
-    int index = 0;
-    for (index = 0; index < m_highscores.length(); index++) {
-        if (player->timeAchieved() > m_highscores[index]->timeAchieved()) {
-            break;
+    if (m_highscoreType == HighscoreType::TimeLevel) {
+        int index = 0;
+        for (index = 0; index < m_highscores.length(); index++) {
+            if (player->timeAchieved() > m_highscores[index]->timeAchieved()) {
+                break;
+            }
         }
+
+        if (index < m_highscores.length()) {
+            Player *newPlayer = new Player();
+            newPlayer->setName(player->name());
+            newPlayer->setTimeAchieved(player->timeAchieved());
+            newPlayer->setLevelAchieved(player->levelAchieved());
+            newPlayer->setInHighscoreList(true);
+
+            m_highscores.insert(index, newPlayer);
+            m_highscores.removeAt(m_highscores.length() - 1);
+        }
+
+        if (index == 0) {
+            m_newHighscore = true;
+        }
+    } else if (m_highscoreType == HighscoreType::Points) {
+        qWarning() << "HighscoreType 'Points' is not implemented for GameType 'PvP'";
     }
+}
 
-    if (index < m_highscores.length()) {
-        Player *newPlayer = new Player();
-        newPlayer->setName(player->name());
-        newPlayer->setTimeAchieved(player->timeAchieved());
-        newPlayer->setLevelAchieved(player->levelAchieved());
-        newPlayer->setInHighscoreList(true);
+void GameData::updateHighscoresWithCoopPlayer(Player *coopPlayer)
+{
+    if (m_highscoreType == HighscoreType::Points) {
+        int index = 0;
+        for (index = 0; index < m_highscores.length(); index++) {
+            if (coopPlayer->pointsAchieved() > m_highscores[index]->pointsAchieved()) {
+                break;
+            }
+        }
 
-        m_highscores.insert(index, newPlayer);
-        m_highscores.removeAt(m_highscores.length() - 1);
-    }
+        if (index < m_highscores.length()) {
+            Player *newPlayer = new Player();
+            newPlayer->setName(coopPlayer->name());
+            newPlayer->setPointsAchieved(coopPlayer->pointsAchieved());
+            newPlayer->setInHighscoreList(true);
 
-    if (index == 0) {
-        m_newHighscore = true;
+            m_highscores.insert(index, newPlayer);
+            m_highscores.removeAt(m_highscores.length() - 1);
+        }
+
+        if (index == 0) {
+            m_newHighscore = true;
+        }
+    } else if (m_highscoreType == HighscoreType::TimeLevel) {
+        qWarning() << "HighscoreType 'TimeLevel' is not implemented for GameType 'Coop'";
     }
 }
 
@@ -178,12 +246,32 @@ Player* GameData::player2()
 
 Player* GameData::winner()
 {
-    if (m_player1->timeAchieved() >= m_player2->timeAchieved()) {
-        return m_player1;
+    if (m_gameType == GameType::Coop) {
+        if (m_highscoreType == HighscoreType::Points) {
+            return getCoopPlayer();
+        } else if (m_highscoreType == HighscoreType::TimeLevel) {
+            qWarning() << "HighscoreType 'TimeLevel' is not implemented for GameType 'Coop'";
+        }
+    } else if (m_gameType == GameType::PvP) {
+        if (m_highscoreType == HighscoreType::TimeLevel) {
+            if (m_player1->timeAchieved() >= m_player2->timeAchieved()) {
+                return m_player1;
+            }
+            return m_player2;
+        } else if (m_highscoreType == HighscoreType::Points) {
+            qWarning() << "HighscoreType 'Points' is not implemented for GameType 'PvP'";
+        }
     }
-    else {
-        return m_player2;
-    }
+    return new Player();
+}
+
+Player* GameData::getCoopPlayer() {
+    Player *coopPlayer = new Player();
+    coopPlayer->setName(m_player1->name() + " & " + m_player2->name());
+    coopPlayer->setTimeAchieved(m_player1->timeAchieved());
+    coopPlayer->setLevelAchieved(m_player1->levelAchieved());
+    coopPlayer->setPointsAchieved(m_player1->pointsAchieved() + m_player2->pointsAchieved());
+    return coopPlayer;
 }
 
 bool GameData::newHighscore()

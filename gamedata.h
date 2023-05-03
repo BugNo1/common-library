@@ -3,8 +3,12 @@
 
 #include <QObject>
 #include <QVariant>
+#include <QFile>
+#include <QDir>
+#include <QTextStream>
+
 #include "player.h"
-#include "player_tablemodel.h"
+#include "abstract_player_tablemodel.h"
 
 class GameData : public QObject
 {
@@ -16,8 +20,11 @@ class GameData : public QObject
     Q_PROPERTY(bool newHighscore READ newHighscore CONSTANT)
 
 public:
+    enum GameType {Coop, PvP};
+    enum HighscoreType {Points, TimeLevel};
+
     GameData(QObject *parent=0);
-    GameData(PlayerTableModel *playerItemModel, QObject *parent=0);
+    GameData(AbstractPlayerTableModel *playerTableModel, GameType gameType, HighscoreType highscoreType, QObject *parent=0);
 
     Q_INVOKABLE void initialize();
 
@@ -28,6 +35,7 @@ public:
     Q_INVOKABLE void saveHighscores();
     Q_INVOKABLE void updateHighscores();
     void updateHighscoresWithPlayer(Player *player);
+    void updateHighscoresWithCoopPlayer(Player *coopPlayer);
     void resetInHighscoreList();
 
     Player* player1();
@@ -37,16 +45,20 @@ public:
 
 private:
     void setup();
+    void loadPointsHighscores(QString line, int lineIndex);
+    void savePointsHighscores(QTextStream &stream, int index);
+    void loadTimeLevelHighscores(QString line, int lineIndex);
+    void saveTimeLevelHighscores(QTextStream &stream, int index);
+    Player* getCoopPlayer();
 
     Player *m_player1;
     Player *m_player2;
     bool m_newHighscore;
     QString m_playerNamesFilePath;
     QString m_highscoresFilePath;
-    PlayerTableModel *m_playerItemModel;
-
-
-
+    GameType m_gameType;
+    HighscoreType m_highscoreType;
+    AbstractPlayerTableModel *m_playerTableModel;
     QList<Player *> m_highscores;
 };
 

@@ -1,27 +1,27 @@
 #include <QDebug>
-#include "player_tablemodel.h"
+#include "player_tablemodel_timelevel.h"
 
-PlayerTableModel::PlayerTableModel(QObject *parent)
+PlayerTableModelTimeLevel::PlayerTableModelTimeLevel(QObject *parent)
     : QAbstractTableModel(parent)
 {
 }
 
-void PlayerTableModel::setData(QList<Player *> *data)
+void PlayerTableModelTimeLevel::setData(QList<Player *> *data)
 {
     m_playerData = data;
 }
 
-int PlayerTableModel::rowCount(const QModelIndex &parent) const
+int PlayerTableModelTimeLevel::rowCount(const QModelIndex &parent) const
 {
     return m_playerData->size();
 }
 
-int PlayerTableModel::columnCount(const QModelIndex &parent) const
+int PlayerTableModelTimeLevel::columnCount(const QModelIndex &parent) const
 {
     return 4;
 }
 
-QVariant PlayerTableModel::data(const QModelIndex &index, int role) const
+QVariant PlayerTableModelTimeLevel::data(const QModelIndex &index, int role) const
 {
     if (!index.isValid()) {
         return QVariant();
@@ -64,7 +64,7 @@ QVariant PlayerTableModel::data(const QModelIndex &index, int role) const
     return QVariant();
 }
 
-QVariant PlayerTableModel::headerData(int section, Qt::Orientation orientation, int role) const
+QVariant PlayerTableModelTimeLevel::headerData(int section, Qt::Orientation orientation, int role) const
 {
     if (role == Qt::DisplayRole && orientation == Qt::Horizontal) {
         switch (section) {
@@ -81,7 +81,7 @@ QVariant PlayerTableModel::headerData(int section, Qt::Orientation orientation, 
     return QVariant();
 }
 
-QHash<int, QByteArray> PlayerTableModel::roleNames() const
+QHash<int, QByteArray> PlayerTableModelTimeLevel::roleNames() const
 {
     QHash<int, QByteArray> roles;
     roles[ValueRole] = "value";

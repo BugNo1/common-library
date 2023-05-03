@@ -1,10 +1,10 @@
-#ifndef PLAYER_TABLEMODEL_H
-#define PLAYER_TABLEMODEL_H
+#ifndef PLAYER_TABLEMODEL_TIMELEVEL_H
+#define PLAYER_TABLEMODEL_TIMELEVEL_H
 
 #include <QAbstractTableModel>
 #include "player.h"
 
-class PlayerTableModel : public QAbstractTableModel
+class PlayerTableModelTimeLevel : public QAbstractTableModel
 {
     Q_OBJECT
 
@@ -15,7 +15,7 @@ public:
         ColorRole
     };
 
-    PlayerTableModel(QObject *parent=0);
+    PlayerTableModelTimeLevel(QObject *parent=0);
 
     void setData(QList<Player *> *data);
     int rowCount(const QModelIndex &parent=QModelIndex()) const;
@@ -30,6 +30,6 @@ protected:
     QVariant headerData(int section, Qt::Orientation orientation, int role) const;
 };
 
-Q_DECLARE_METATYPE(PlayerTableModel *)
+Q_DECLARE_METATYPE(PlayerTableModelTimeLevel *)
 
-#endif // PLAYER_TABLEMODEL_H
+#endif // PLAYER_TABLEMODEL_TIMELEVEL_H
