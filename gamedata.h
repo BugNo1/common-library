@@ -34,8 +34,7 @@ public:
     void loadHighscores();
     Q_INVOKABLE void saveHighscores();
     Q_INVOKABLE void updateHighscores();
-    void updateHighscoresWithPlayer(Player *player);
-    void updateHighscoresWithCoopPlayer(Player *coopPlayer);
+    void updateHighscores(Player *player);
     void resetInHighscoreList();
 
     Player* player1();
@@ -45,6 +44,8 @@ public:
 
 private:
     void setup();
+    int getPlayerIndexInHiscoreList(Player *player);
+    void addPlayerToHighscoreList(Player *player, int index);
     void loadPointsHighscores(QString line, int lineIndex);
     void savePointsHighscores(QTextStream &stream, int index);
     void loadTimeLevelHighscores(QString line, int lineIndex);

@@ -163,68 +163,49 @@ void GameData::saveTimeLevelHighscores(QTextStream &stream, int index)
 void GameData::updateHighscores()
 {
     if (m_gameType == GameType::Coop) {
-        updateHighscoresWithCoopPlayer(getCoopPlayer());
+        updateHighscores(getCoopPlayer());
     } else if (m_gameType == GameType::PvP) {
-        updateHighscoresWithPlayer(m_player1);
-        updateHighscoresWithPlayer(m_player2);
+        updateHighscores(m_player1);
+        updateHighscores(m_player2);
     }
 }
 
-void GameData::updateHighscoresWithPlayer(Player *player)
+void GameData::updateHighscores(Player *player)
 {
+    int index = getPlayerIndexInHiscoreList(player);
+    if (index < m_highscores.length()) {
+        addPlayerToHighscoreList(player, index);
+    }
+    if (index == 0) {
+        m_newHighscore = true;
+    }
+}
+
+int GameData::getPlayerIndexInHiscoreList(Player *player) {
+    int index = 0;
+    for (index = 0; index < m_highscores.length(); index++) {
+        if ((m_highscoreType == HighscoreType::TimeLevel) && (player->timeAchieved() > m_highscores[index]->timeAchieved()))
+            break;
+        else if ((m_highscoreType == HighscoreType::Points) && (player->pointsAchieved() > m_highscores[index]->pointsAchieved()))
+            break;
+    }
+    return index;
+}
+
+void GameData::addPlayerToHighscoreList(Player *player, int index) {
+    Player *newPlayer = new Player();
     if (m_highscoreType == HighscoreType::TimeLevel) {
-        int index = 0;
-        for (index = 0; index < m_highscores.length(); index++) {
-            if (player->timeAchieved() > m_highscores[index]->timeAchieved()) {
-                break;
-            }
-        }
-
-        if (index < m_highscores.length()) {
-            Player *newPlayer = new Player();
-            newPlayer->setName(player->name());
-            newPlayer->setTimeAchieved(player->timeAchieved());
-            newPlayer->setLevelAchieved(player->levelAchieved());
-            newPlayer->setInHighscoreList(true);
-
-            m_highscores.insert(index, newPlayer);
-            m_highscores.removeAt(m_highscores.length() - 1);
-        }
-
-        if (index == 0) {
-            m_newHighscore = true;
-        }
+        newPlayer->setName(player->name());
+        newPlayer->setTimeAchieved(player->timeAchieved());
+        newPlayer->setLevelAchieved(player->levelAchieved());
+        newPlayer->setInHighscoreList(true);
     } else if (m_highscoreType == HighscoreType::Points) {
-        qWarning() << "HighscoreType 'Points' is not implemented for GameType 'PvP'";
+        newPlayer->setName(player->name());
+        newPlayer->setPointsAchieved(player->pointsAchieved());
+        newPlayer->setInHighscoreList(true);
     }
-}
-
-void GameData::updateHighscoresWithCoopPlayer(Player *coopPlayer)
-{
-    if (m_highscoreType == HighscoreType::Points) {
-        int index = 0;
-        for (index = 0; index < m_highscores.length(); index++) {
-            if (coopPlayer->pointsAchieved() > m_highscores[index]->pointsAchieved()) {
-                break;
-            }
-        }
-
-        if (index < m_highscores.length()) {
-            Player *newPlayer = new Player();
-            newPlayer->setName(coopPlayer->name());
-            newPlayer->setPointsAchieved(coopPlayer->pointsAchieved());
-            newPlayer->setInHighscoreList(true);
-
-            m_highscores.insert(index, newPlayer);
-            m_highscores.removeAt(m_highscores.length() - 1);
-        }
-
-        if (index == 0) {
-            m_newHighscore = true;
-        }
-    } else if (m_highscoreType == HighscoreType::TimeLevel) {
-        qWarning() << "HighscoreType 'TimeLevel' is not implemented for GameType 'Coop'";
-    }
+    m_highscores.insert(index, newPlayer);
+    m_highscores.removeAt(m_highscores.length() - 1);
 }
 
 void GameData::resetInHighscoreList()
@@ -247,11 +228,7 @@ Player* GameData::player2()
 Player* GameData::winner()
 {
     if (m_gameType == GameType::Coop) {
-        if (m_highscoreType == HighscoreType::Points) {
-            return getCoopPlayer();
-        } else if (m_highscoreType == HighscoreType::TimeLevel) {
-            qWarning() << "HighscoreType 'TimeLevel' is not implemented for GameType 'Coop'";
-        }
+        return getCoopPlayer();
     } else if (m_gameType == GameType::PvP) {
         if (m_highscoreType == HighscoreType::TimeLevel) {
             if (m_player1->timeAchieved() >= m_player2->timeAchieved()) {
@@ -259,7 +236,10 @@ Player* GameData::winner()
             }
             return m_player2;
         } else if (m_highscoreType == HighscoreType::Points) {
-            qWarning() << "HighscoreType 'Points' is not implemented for GameType 'PvP'";
+            if (m_player1->pointsAchieved() >= m_player2->pointsAchieved()) {
+                return m_player1;
+            }
+            return m_player2;
         }
     }
     return new Player();
